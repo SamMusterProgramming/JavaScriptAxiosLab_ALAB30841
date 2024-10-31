@@ -42,13 +42,15 @@ const axiosApiUrl = axios.create({
 
 axiosApiUrl.interceptors.request.use(request => {
   console.log('Request sent.');
+  document.querySelector("body").style.cursor = "progress"
   return request;
 });
 
 axiosApiUrl.interceptors.request.use(request => {
   request.metadata = request.metadata || {};
   request.metadata.startTime = new Date().getTime();
-  progressBar.style.width = 0;
+  progressBar.style.width = "0";
+  document.querySelector("body").classList.add('body')
   return request;
 });
 
@@ -56,6 +58,7 @@ axiosApiUrl.interceptors.response.use(
   (response) => {
       response.config.metadata.endTime = new Date().getTime();
       response.durationInMS = response.config.metadata.endTime - response.config.metadata.startTime;
+     
       return response;
   },
   (error) => {
@@ -102,7 +105,8 @@ initialLoad();
 const selectedBreedById = async (id) => {
   return await axiosApiUrl.get(`/images/search?limit=20&breed_ids=${id}&api_key=${API_KEY}`,{
     onDownloadProgress: (progressEvent) => {
-        console.log(progressEvent) // progress is set every 10 milliseconds
+       
+        updateProgress(`100%`)
     }} ) 
     // limit the images to 20 
   .then(response =>  {console.log(response.durationInMS + ` ms`) ; return response.data}
@@ -115,7 +119,7 @@ breedSelect.addEventListener("change",async(e) => {
   e.preventDefault();
   Carousel.clear(); // clear the Carousel to load new images into carousel
   await selectedBreedById(e.target.value).then((images) => {
-    
+    console.log(images)
     images.map((img) => {
       const element = Carousel.createCarouselItem(
         img.url,
@@ -125,6 +129,7 @@ breedSelect.addEventListener("change",async(e) => {
       Carousel.appendCarousel(element);
     })
     Carousel.start();
+    
   }
   ).catch(error => console.log(error))
 });

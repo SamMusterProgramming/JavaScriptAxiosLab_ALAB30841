@@ -23371,12 +23371,14 @@ var axiosApiUrl = _axios.default.create({
 });
 axiosApiUrl.interceptors.request.use(function (request) {
   console.log('Request sent.');
+  document.querySelector("body").style.cursor = "progress";
   return request;
 });
 axiosApiUrl.interceptors.request.use(function (request) {
   request.metadata = request.metadata || {};
   request.metadata.startTime = new Date().getTime();
-  progressBar.style.width = 0;
+  progressBar.style.width = "0";
+  document.querySelector("body").classList.add('body');
   return request;
 });
 axiosApiUrl.interceptors.response.use(function (response) {
@@ -23436,7 +23438,7 @@ var selectedBreedById = /*#__PURE__*/function () {
           _context2.next = 2;
           return axiosApiUrl.get("/images/search?limit=20&breed_ids=".concat(id, "&api_key=").concat(API_KEY), {
             onDownloadProgress: function onDownloadProgress(progressEvent) {
-              console.log(progressEvent); // progress is set every 10 milliseconds
+              updateProgress("100%");
             }
           })
           // limit the images to 20 
@@ -23465,6 +23467,7 @@ breedSelect.addEventListener("change", /*#__PURE__*/function () {
           Carousel.clear(); // clear the Carousel to load new images into carousel
           _context3.next = 4;
           return selectedBreedById(e.target.value).then(function (images) {
+            console.log(images);
             images.map(function (img) {
               var element = Carousel.createCarouselItem(img.url, "".concat(img.id), img.id);
               Carousel.appendCarousel(element);
