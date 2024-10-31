@@ -8,7 +8,7 @@ export function createCarouselItem(imgSrc, imgAlt, imgId) {
   const img = clone.querySelector("img");
   img.src = imgSrc;
   img.alt = imgAlt;
-
+  img.style.height ="400px";
   const favBtn = clone.querySelector(".favourite-button");
   favBtn.addEventListener("click", () => {
     favourite(imgId);

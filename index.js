@@ -1,3 +1,4 @@
+import { error } from "jquery";
 import * as Carousel from "./Carousel.js";
 import axios from "axios";
 
@@ -33,20 +34,60 @@ document.querySelector("body").addEventListener("click", (e) => {
   e.preventDefault();
 });
 
+// set up axios here
 const baseURL = `https://api.thecatapi.com/v1`;
 const axiosApiUrl = axios.create({
   baseURL:baseURL
 });
 
+axiosApiUrl.interceptors.request.use(request => {
+  console.log('Request sent.');
+  return request;
+});
+
+axiosApiUrl.interceptors.request.use(request => {
+  request.metadata = request.metadata || {};
+  request.metadata.startTime = new Date().getTime();
+  progressBar.style.width = 0;
+  return request;
+});
+
+axiosApiUrl.interceptors.response.use(
+  (response) => {
+      response.config.metadata.endTime = new Date().getTime();
+      response.durationInMS = response.config.metadata.endTime - response.config.metadata.startTime;
+      return response;
+  },
+  (error) => {
+      error.config.metadata.endTime = new Date().getTime();
+      error.durationInMS = error.config.metadata.endTime - error.config.metadata.startTime;
+      throw error;
+});
 
 const initialLoad = async () => {
     axiosApiUrl.get('/breeds')
     .then((response) => {
-      //map the data collected and for each breed option create option element and append it
+      // log the response time
+      console.log(response.durationInMS + ` ms`
+      )
+      //map the data collected and for each breed option / create option element and append it
       const data = response.data;
-      data.map((option) => {
-          // if(index ==0){};
-         
+      data.map((option,index) => {
+       if(index ==0){
+         // display the first breed imgs in carousel while loading up the breeds into the selector
+         selectedBreedById(option.id).then((images) => {
+          images.map((img) => {
+            const element = Carousel.createCarouselItem(
+              img.url,
+              `${img.id}`,
+              img.id
+             );
+            Carousel.appendCarousel(element);
+          })
+          Carousel.start();
+        }
+        )
+         }; 
         const optionEl = document.createElement("option");
         optionEl.textContent = `${option.id}`;
         optionEl.setAttribute("value", option.id);
@@ -59,8 +100,12 @@ const initialLoad = async () => {
 initialLoad();
 
 const selectedBreedById = async (id) => {
-  return await axiosApiUrl.get(`/images/search?limit=20&breed_ids=${id}&api_key=${API_KEY}`) // limit the images to 20 
-  .then(response => response.data
+  return await axiosApiUrl.get(`/images/search?limit=20&breed_ids=${id}&api_key=${API_KEY}`,{
+    onDownloadProgress: (progressEvent) => {
+        console.log(progressEvent) // progress is set every 10 milliseconds
+    }} ) 
+    // limit the images to 20 
+  .then(response =>  {console.log(response.durationInMS + ` ms`) ; return response.data}
   )
 }
 
@@ -68,9 +113,9 @@ const selectedBreedById = async (id) => {
 
 breedSelect.addEventListener("change",async(e) => {
   e.preventDefault();
-  console.log(e.target.value)
   Carousel.clear(); // clear the Carousel to load new images into carousel
   await selectedBreedById(e.target.value).then((images) => {
+    
     images.map((img) => {
       const element = Carousel.createCarouselItem(
         img.url,
@@ -79,17 +124,19 @@ breedSelect.addEventListener("change",async(e) => {
        );
       Carousel.appendCarousel(element);
     })
+    Carousel.start();
   }
-  )
-  Carousel.start();
+  ).catch(error => console.log(error))
 });
-
+Carousel.start();
 /**
  * 5. Add axios interceptors to log the time between request and response to the console.
  * - Hint: you already have access to code that does this!
  * - Add a console.log statement to indicate when requests begin.
  * - As an added challenge, try to do this on your own without referencing the lesson material.
  */
+
+// see above added axios interceptors to handle response duration
 
 /**
  * 6. Next, we'll create a progress bar to indicate the request is in progress.
@@ -106,6 +153,10 @@ breedSelect.addEventListener("change",async(e) => {
  *   once or twice per request to this API. This is still a concept worth familiarizing yourself
  *   with for future projects.
  */
+ 
+function updateProgress (value){
+  progressBar.style.width = value;
+}
 
 /**
  * 7. As a final element of progress indication, add the following to your axios interceptors:
