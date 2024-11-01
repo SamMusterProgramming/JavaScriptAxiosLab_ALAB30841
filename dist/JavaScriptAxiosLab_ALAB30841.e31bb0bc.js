@@ -18069,6 +18069,7 @@ var _index = require("./index.js");
 function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return null; var r = new WeakMap(), t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r; })(e); }
 function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && {}.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
 function createCarouselItem(imgSrc, imgAlt, imgId) {
+  var isFavourite = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
   var template = document.querySelector("#carouselItemTemplate");
   var clone = template.content.firstElementChild.cloneNode(true);
   var img = clone.querySelector("img");
@@ -18076,11 +18077,12 @@ function createCarouselItem(imgSrc, imgAlt, imgId) {
   img.alt = imgAlt;
   img.style.height = "400px";
   var favBtn = clone.querySelector(".favourite-button");
+  if (isFavourite) favBtn.style.color = "red";else favBtn.style.color = "lightpink";
   favBtn.addEventListener("click", function () {
-    (0, _index.favourite)(imgId).then(function (added) {
-      if (added) favBtn.style.color = "red";else favBtn.style.color = "lightpink";
+    // added a logic to swicth the color of the hear button from light pink to red and verse versa
+    (0, _index.favourite)(imgId).then(function (isFavourite) {
+      if (isFavourite) favBtn.style.color = "lightpink";else favBtn.style.color = "red";
     });
-    //add red color to button text heard when selected
   });
   return clone;
 }
@@ -23615,24 +23617,24 @@ function _favourite() {
       while (1) switch (_context4.prev = _context4.next) {
         case 0:
           rawBody = JSON.stringify({
-            "image_id": imgId
+            "image_id": imgId,
+            "sub_id": "samir2024"
           });
           _context4.next = 3;
-          return isFavouriteSelected(imgId).then(function (returnedBool) {
-            if (!returnedBool) {
-              return fetch("https://api.thecatapi.com/v1/favourites", {
+          return isFavouriteSelected(imgId).then(function (isAlreadyFavourite) {
+            if (!isAlreadyFavourite) {
+              fetch("https://api.thecatapi.com/v1/favourites", {
                 method: 'POST',
                 headers: {
                   'x-api-key': API_KEY,
                   'Content-Type': 'application/json; charset=UTF-8'
                 },
                 body: rawBody
-              }).then(function (response) {
-                return true;
               }).catch(function (error) {
                 return console.log(error);
               });
             }
+            return isAlreadyFavourite;
           });
         case 3:
           return _context4.abrupt("return", _context4.sent);
@@ -23671,7 +23673,6 @@ function _isFavouriteSelected() {
           }).then(function (response) {
             return response.json();
           }).then(function (data) {
-            console.log(data);
             if (data.length !== 0) {
               fetch("https://api.thecatapi.com/v1/favourites/".concat(data[0].id), {
                 method: 'DELETE',
@@ -23693,7 +23694,46 @@ function _isFavouriteSelected() {
   }));
   return _isFavouriteSelected.apply(this, arguments);
 }
-function getFavourites() {}
+function getFavourites() {
+  return _getFavourites.apply(this, arguments);
+}
+function _getFavourites() {
+  _getFavourites = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
+    return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+      while (1) switch (_context6.prev = _context6.next) {
+        case 0:
+          _context6.next = 2;
+          return axiosApiUrl.get('/favourites', {
+            headers: {
+              'x-api-key': API_KEY
+            }
+          }).then(function (response) {
+            return response.data;
+          }).then(function (images) {
+            Carousel.clear();
+            images.map(function (img) {
+              var element = Carousel.createCarouselItem(img.image.url, "".concat(img.id), img.image_id, true);
+              Carousel.appendCarousel(element);
+            });
+            Carousel.start();
+          });
+        case 2:
+          return _context6.abrupt("return", _context6.sent);
+        case 3:
+        case "end":
+          return _context6.stop();
+      }
+    }, _callee6);
+  }));
+  return _getFavourites.apply(this, arguments);
+}
+getFavouritesBtn.addEventListener('click', function (e) {
+  e.preventDefault();
+  getFavourites();
+});
+function isImageFavourite(_x5) {
+  return _isImageFavourite.apply(this, arguments);
+}
 /**
  * 10. Test your site, thoroughly!
  * - What happens when you try to load the Malayan breed?
@@ -23701,6 +23741,31 @@ function getFavourites() {}
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
  */
+function _isImageFavourite() {
+  _isImageFavourite = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7(imgId) {
+    return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+      while (1) switch (_context7.prev = _context7.next) {
+        case 0:
+          _context7.next = 2;
+          return axiosApiUrl.get("/favourites?image_id=".concat(imgId), {
+            headers: {
+              'x-api-key': API_KEY
+            }
+          }).then(function (response) {
+            return response.data;
+          }).then(function (data) {
+            return console.log(data.length !== 0);
+          });
+        case 2:
+          return _context7.abrupt("return", _context7.sent);
+        case 3:
+        case "end":
+          return _context7.stop();
+      }
+    }, _callee7);
+  }));
+  return _isImageFavourite.apply(this, arguments);
+}
 },{"jquery":"node_modules/jquery/dist/jquery.js","./Carousel.js":"Carousel.js","axios":"node_modules/axios/index.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
@@ -23726,7 +23791,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "44065" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "38935" + '/');
   ws.onmessage = function (event) {
     checkedAssets = {};
     assetsToAccept = [];

@@ -10,7 +10,7 @@ const infoDump = document.getElementById("infoDump");
 const progressBar = document.getElementById("progressBar");
 // The get favourites button element.
 const getFavouritesBtn = document.getElementById("getFavouritesBtn");
-
+ 
 // Step 0: Store your API key here for reference and easy access.
 
 const API_KEY =
@@ -102,10 +102,10 @@ const initialLoad = async () => {
 
 initialLoad();
 
+
 const selectedBreedById = async (id) => {
   return await axiosApiUrl.get(`/images/search?limit=20&breed_ids=${id}&api_key=${API_KEY}`,{
     onDownloadProgress: (progressEvent) => {
-       
         updateProgress(`100%`)
     }} ) 
     // limit the images to 20 
@@ -117,20 +117,20 @@ const selectedBreedById = async (id) => {
 
 breedSelect.addEventListener("change",async(e) => {
   e.preventDefault();
+  
   Carousel.clear(); // clear the Carousel to load new images into carousel
   await selectedBreedById(e.target.value).then((images) => {
-    images.map((img) => {
-      const element = Carousel.createCarouselItem(
-        img.url,
-        `${img.id}`,
-        img.id
-       );
-      Carousel.appendCarousel(element);
-    })
+     images.map( (img) => {
+        const element = Carousel.createCarouselItem(
+          img.url,
+          `${img.id}`,
+          img.id,
+         );
+        Carousel.appendCarousel(element);
+      })
     Carousel.start();
-    
-  }
-  ).catch(error => console.log(error))
+      })
+  .catch(error => console.log(error))
 });
 Carousel.start();
 /**
@@ -180,22 +180,22 @@ function updateProgress (value){
  */
 // let's use fecth here 
 export async function favourite(imgId) {
-  
   const rawBody = JSON.stringify({ 
-    "image_id": imgId 
+    "image_id": imgId ,
+    "sub_id":"samir2024"
      });
-    return await isFavouriteSelected(imgId).then(returnedBool => {
-       if (!returnedBool) {
-      return  fetch(
-          `https://api.thecatapi.com/v1/favourites`, 
+    return await isFavouriteSelected(imgId).then(isAlreadyFavourite => {
+       if (!isAlreadyFavourite) {
+       fetch(`https://api.thecatapi.com/v1/favourites`, 
               {
                   method: 'POST',
                   headers: { 'x-api-key': API_KEY,'Content-Type': 'application/json; charset=UTF-8'  } ,
                   body: rawBody
               }
-          ).then(response => {return true}).
+          ).
           catch(error => console.log(error))
        }
+       return isAlreadyFavourite 
      })
    
 }
@@ -206,8 +206,8 @@ async function isFavouriteSelected(imgId) {
          "content-type":"application/json",
         'x-api-key': API_KEY
     }
-}).then(response => response.json()).then(data => { console.log(data)
-  if(data.length !== 0){ 
+}).then(response => response.json()).then(data => { 
+  if(data.length !== 0){  
      fetch(`https://api.thecatapi.com/v1/favourites/${data[0].id}`, {
       method: 'DELETE',
       headers: { 'x-api-key': API_KEY ,
@@ -228,9 +228,43 @@ async function isFavouriteSelected(imgId) {
  *    If that isn't in its own function, maybe it should be so you don't have to
  *    repeat yourself in this section.
  */
-function getFavourites(){
+async function getFavourites(){
+   return await axiosApiUrl.get('/favourites',{
+    headers: {
+       'x-api-key': API_KEY
+    }
+  }).then(response => response.data).then((images) =>
+    { Carousel.clear();
+      images.map((img) => {   
+        const element = Carousel.createCarouselItem(
+          img.image.url,
+          `${img.id}`,
+          img.image_id,
+          true
+         );
+        Carousel.appendCarousel(element);
+      })
+      Carousel.start();
   
+    }
+   )
 }
+getFavouritesBtn.addEventListener('click', (e)=> {
+  e.preventDefault();
+  getFavourites()
+ 
+})
+
+ async function isImageFavourite(imgId) {
+  return await axiosApiUrl.get(`/favourites?image_id=${imgId}`,{
+     headers:{
+   'x-api-key': API_KEY
+}
+}).then(response => response.data).then(data =>  console.log(data.length !== 0) )
+
+}
+
+
 /**
  * 10. Test your site, thoroughly!
  * - What happens when you try to load the Malayan breed?

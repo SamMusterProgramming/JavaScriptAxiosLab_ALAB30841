@@ -1,7 +1,7 @@
 import * as bootstrap from "bootstrap";
-import { favourite } from "./index.js";
+import { favourite  } from "./index.js";
 
-export function createCarouselItem(imgSrc, imgAlt, imgId) {
+export function createCarouselItem(imgSrc, imgAlt, imgId, isFavourite = false) {
   const template = document.querySelector("#carouselItemTemplate");
   const clone = template.content.firstElementChild.cloneNode(true);
 
@@ -10,13 +10,15 @@ export function createCarouselItem(imgSrc, imgAlt, imgId) {
   img.alt = imgAlt;
   img.style.height ="400px";
   const favBtn = clone.querySelector(".favourite-button");
+  if (isFavourite) favBtn.style.color = "red"
+  else favBtn.style.color = "lightpink"
+
   favBtn.addEventListener("click", () => {
-    favourite(imgId).then(added => { 
-      if(added) favBtn.style.color ="red"
-      else favBtn.style.color ="lightpink"
-    });
-    //add red color to button text heard when selected
-   
+    // added a logic to swicth the color of the hear button from light pink to red and verse versa
+    favourite(imgId).then(isFavourite => {
+      if (isFavourite) favBtn.style.color = "lightpink" 
+      else favBtn.style.color = "red"
+    }) 
   });
 
   return clone;
