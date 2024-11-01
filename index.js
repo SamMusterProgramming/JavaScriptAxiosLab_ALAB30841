@@ -119,7 +119,6 @@ breedSelect.addEventListener("change",async(e) => {
   e.preventDefault();
   Carousel.clear(); // clear the Carousel to load new images into carousel
   await selectedBreedById(e.target.value).then((images) => {
-    console.log(images)
     images.map((img) => {
       const element = Carousel.createCarouselItem(
         img.url,
@@ -179,10 +178,47 @@ function updateProgress (value){
  *   you delete that favourite using the API, giving this function "toggle" functionality.
  * - You can call this function by clicking on the heart at the top right of any image.
  */
+// let's use fecth here 
 export async function favourite(imgId) {
-  // your code here
+  
+  const rawBody = JSON.stringify({ 
+    "image_id": imgId 
+     });
+    return await isFavouriteSelected(imgId).then(returnedBool => {
+       if (!returnedBool) {
+      return  fetch(
+          `https://api.thecatapi.com/v1/favourites`, 
+              {
+                  method: 'POST',
+                  headers: { 'x-api-key': API_KEY,'Content-Type': 'application/json; charset=UTF-8'  } ,
+                  body: rawBody
+              }
+          ).then(response => {return true}).
+          catch(error => console.log(error))
+       }
+     })
+   
 }
-
+async function isFavouriteSelected(imgId) {
+   return await fetch(`https://api.thecatapi.com/v1/favourites?image_id=${imgId}`,{
+    headers:{
+         method: 'GET',
+         "content-type":"application/json",
+        'x-api-key': API_KEY
+    }
+}).then(response => response.json()).then(data => { console.log(data)
+  if(data.length !== 0){ 
+     fetch(`https://api.thecatapi.com/v1/favourites/${data[0].id}`, {
+      method: 'DELETE',
+      headers: { 'x-api-key': API_KEY ,
+        'Content-type': 'application/json'
+      }
+      
+  }) 
+  return true
+  } else  return false
+})
+}
 /**
  * 9. Test your favourite() function by creating a getFavourites() function.
  * - Use Axios to get all of your favourites from the cat API.
@@ -192,7 +228,9 @@ export async function favourite(imgId) {
  *    If that isn't in its own function, maybe it should be so you don't have to
  *    repeat yourself in this section.
  */
-
+function getFavourites(){
+  
+}
 /**
  * 10. Test your site, thoroughly!
  * - What happens when you try to load the Malayan breed?

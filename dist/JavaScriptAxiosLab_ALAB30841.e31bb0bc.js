@@ -18077,7 +18077,10 @@ function createCarouselItem(imgSrc, imgAlt, imgId) {
   img.style.height = "400px";
   var favBtn = clone.querySelector(".favourite-button");
   favBtn.addEventListener("click", function () {
-    (0, _index.favourite)(imgId);
+    (0, _index.favourite)(imgId).then(function (added) {
+      if (added) favBtn.style.color = "red";else favBtn.style.color = "lightpink";
+    });
+    //add red color to button text heard when selected
   });
   return clone;
 }
@@ -23537,7 +23540,6 @@ breedSelect.addEventListener("change", /*#__PURE__*/function () {
           Carousel.clear(); // clear the Carousel to load new images into carousel
           _context3.next = 4;
           return selectedBreedById(e.target.value).then(function (images) {
-            console.log(images);
             images.map(function (img) {
               var element = Carousel.createCarouselItem(img.url, "".concat(img.id), img.id);
               Carousel.appendCarousel(element);
@@ -23602,8 +23604,48 @@ function updateProgress(value) {
  *   you delete that favourite using the API, giving this function "toggle" functionality.
  * - You can call this function by clicking on the heart at the top right of any image.
  */
+// let's use fecth here 
 function favourite(_x3) {
   return _favourite.apply(this, arguments);
+}
+function _favourite() {
+  _favourite = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(imgId) {
+    var rawBody;
+    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+      while (1) switch (_context4.prev = _context4.next) {
+        case 0:
+          rawBody = JSON.stringify({
+            "image_id": imgId
+          });
+          _context4.next = 3;
+          return isFavouriteSelected(imgId).then(function (returnedBool) {
+            if (!returnedBool) {
+              return fetch("https://api.thecatapi.com/v1/favourites", {
+                method: 'POST',
+                headers: {
+                  'x-api-key': API_KEY,
+                  'Content-Type': 'application/json; charset=UTF-8'
+                },
+                body: rawBody
+              }).then(function (response) {
+                return true;
+              }).catch(function (error) {
+                return console.log(error);
+              });
+            }
+          });
+        case 3:
+          return _context4.abrupt("return", _context4.sent);
+        case 4:
+        case "end":
+          return _context4.stop();
+      }
+    }, _callee4);
+  }));
+  return _favourite.apply(this, arguments);
+}
+function isFavouriteSelected(_x4) {
+  return _isFavouriteSelected.apply(this, arguments);
 }
 /**
  * 9. Test your favourite() function by creating a getFavourites() function.
@@ -23614,6 +23656,44 @@ function favourite(_x3) {
  *    If that isn't in its own function, maybe it should be so you don't have to
  *    repeat yourself in this section.
  */
+function _isFavouriteSelected() {
+  _isFavouriteSelected = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(imgId) {
+    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+      while (1) switch (_context5.prev = _context5.next) {
+        case 0:
+          _context5.next = 2;
+          return fetch("https://api.thecatapi.com/v1/favourites?image_id=".concat(imgId), {
+            headers: {
+              method: 'GET',
+              "content-type": "application/json",
+              'x-api-key': API_KEY
+            }
+          }).then(function (response) {
+            return response.json();
+          }).then(function (data) {
+            console.log(data);
+            if (data.length !== 0) {
+              fetch("https://api.thecatapi.com/v1/favourites/".concat(data[0].id), {
+                method: 'DELETE',
+                headers: {
+                  'x-api-key': API_KEY,
+                  'Content-type': 'application/json'
+                }
+              });
+              return true;
+            } else return false;
+          });
+        case 2:
+          return _context5.abrupt("return", _context5.sent);
+        case 3:
+        case "end":
+          return _context5.stop();
+      }
+    }, _callee5);
+  }));
+  return _isFavouriteSelected.apply(this, arguments);
+}
+function getFavourites() {}
 /**
  * 10. Test your site, thoroughly!
  * - What happens when you try to load the Malayan breed?
@@ -23621,18 +23701,6 @@ function favourite(_x3) {
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
  */
-function _favourite() {
-  _favourite = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(imgId) {
-    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-      while (1) switch (_context4.prev = _context4.next) {
-        case 0:
-        case "end":
-          return _context4.stop();
-      }
-    }, _callee4);
-  }));
-  return _favourite.apply(this, arguments);
-}
 },{"jquery":"node_modules/jquery/dist/jquery.js","./Carousel.js":"Carousel.js","axios":"node_modules/axios/index.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
@@ -23658,7 +23726,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "33611" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "44065" + '/');
   ws.onmessage = function (event) {
     checkedAssets = {};
     assetsToAccept = [];

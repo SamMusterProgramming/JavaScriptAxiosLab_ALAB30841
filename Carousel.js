@@ -11,7 +11,12 @@ export function createCarouselItem(imgSrc, imgAlt, imgId) {
   img.style.height ="400px";
   const favBtn = clone.querySelector(".favourite-button");
   favBtn.addEventListener("click", () => {
-    favourite(imgId);
+    favourite(imgId).then(added => { 
+      if(added) favBtn.style.color ="red"
+      else favBtn.style.color ="lightpink"
+    });
+    //add red color to button text heard when selected
+   
   });
 
   return clone;
