@@ -23369,6 +23369,7 @@ var baseURL = "https://api.thecatapi.com/v1";
 var axiosApiUrl = _axios.default.create({
   baseURL: baseURL
 });
+// axios interceptors
 axiosApiUrl.interceptors.request.use(function (request) {
   console.log('Request sent.');
   document.querySelector("body").style.cursor = "progress";
@@ -23390,6 +23391,9 @@ axiosApiUrl.interceptors.response.use(function (response) {
   error.durationInMS = error.config.metadata.endTime - error.config.metadata.startTime;
   throw error;
 });
+
+// before we display images of each selected breed , i want to add a logic that hundles favourites images in a way to show a red heart for favourite images 
+var storeFavouriteImages = [];
 var initialLoad = /*#__PURE__*/function () {
   var _ref = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
     return _regeneratorRuntime().wrap(function _callee$(_context) {
@@ -23405,7 +23409,7 @@ var initialLoad = /*#__PURE__*/function () {
                 // display the first breed imgs in carousel while loading up the breeds into the selector
                 selectedBreedById(option.id).then(function (images) {
                   images.map(function (img) {
-                    var element = Carousel.createCarouselItem(img.url, "".concat(img.id), img.id);
+                    var element = Carousel.createCarouselItem(img.url, "".concat(img.id), img.id, storeFavouriteImages.includes(img.id));
                     Carousel.appendCarousel(element);
                   });
                   Carousel.start();
@@ -23430,6 +23434,8 @@ var initialLoad = /*#__PURE__*/function () {
   };
 }();
 initialLoad();
+
+//helper function
 var selectedBreedById = /*#__PURE__*/function () {
   var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(id) {
     return _regeneratorRuntime().wrap(function _callee2$(_context2) {
@@ -23467,8 +23473,13 @@ breedSelect.addEventListener("change", /*#__PURE__*/function () {
           Carousel.clear(); // clear the Carousel to load new images into carousel
           _context3.next = 4;
           return selectedBreedById(e.target.value).then(function (images) {
-            images.map(function (img) {
-              var element = Carousel.createCarouselItem(img.url, "".concat(img.id), img.id);
+            if (images.length == 0) {
+              // if empty data , we display template of image showing not available 
+              var element = Carousel.createCarouselItem("../asset/noimage.jpeg", "no image", "123456", false);
+              Carousel.appendCarousel(element);
+            } else images.map(function (img) {
+              var element = Carousel.createCarouselItem(img.url, "".concat(img.id), img.id, storeFavouriteImages.includes(img.id) // boolean to indicate wich color of the favourite button heart red/lightpink
+              );
               Carousel.appendCarousel(element);
             });
             Carousel.start();
@@ -23493,7 +23504,7 @@ Carousel.start();
  * - As an added challenge, try to do this on your own without referencing the lesson material.
  */
 
-// see above added axios interceptors to handle response duration
+// see above, I added axios interceptors to handle response duration
 
 /**
  * 6. Next, we'll create a progress bar to indicate the request is in progress.
@@ -23535,6 +23546,15 @@ function updateProgress(value) {
 function favourite(_x3) {
   return _favourite.apply(this, arguments);
 }
+/**
+ * 9. Test your favourite() function by creating a getFavourites() function.
+ * - Use Axios to get all of your favourites from the cat API.
+ * - Clear the carousel and display your favourites when the button is clicked.
+ *  - You will have to bind this event listener to getFavouritesBtn yourself.
+ *  - Hint: you already have all of the logic built for building a carousel.
+ *    If that isn't in its own function, maybe it should be so you don't have to
+ *    repeat yourself in this section.
+ */
 function _favourite() {
   _favourite = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(imgId) {
     var rawBody;
@@ -23546,20 +23566,44 @@ function _favourite() {
             "sub_id": "samir2024"
           });
           _context4.next = 3;
-          return isFavouriteSelected(imgId).then(function (isAlreadyFavourite) {
-            if (!isAlreadyFavourite) {
-              fetch("https://api.thecatapi.com/v1/favourites", {
+          return fetch("https://api.thecatapi.com/v1/favourites?image_id=".concat(imgId), {
+            headers: {
+              method: 'GET',
+              "content-type": "application/json",
+              'x-api-key': API_KEY
+            }
+          }).then(function (response) {
+            return response.json();
+          }).then(function (data) {
+            if (data.length !== 0) {
+              // if image is already favourite , we delete it from favourite list  and return true
+              return fetch("https://api.thecatapi.com/v1/favourites/".concat(data[0].id), {
+                method: 'DELETE',
+                headers: {
+                  'x-api-key': API_KEY,
+                  'Content-type': 'application/json'
+                }
+              }).then(function (res) {
+                storeFavouriteImages = storeFavouriteImages.filter(function (element) {
+                  return element != imgId;
+                });
+                return true;
+              });
+            } else
+              // if image is not in favourite list , we add it and return false
+              return fetch("https://api.thecatapi.com/v1/favourites", {
                 method: 'POST',
                 headers: {
                   'x-api-key': API_KEY,
                   'Content-Type': 'application/json; charset=UTF-8'
                 },
                 body: rawBody
+              }).then(function (res) {
+                storeFavouriteImages.push(imgId);
+                return false;
               }).catch(function (error) {
                 return console.log(error);
               });
-            }
-            return isAlreadyFavourite;
           });
         case 3:
           return _context4.abrupt("return", _context4.sent);
@@ -23571,63 +23615,29 @@ function _favourite() {
   }));
   return _favourite.apply(this, arguments);
 }
-function isFavouriteSelected(_x4) {
-  return _isFavouriteSelected.apply(this, arguments);
+getFavouritesBtn.addEventListener('click', function (e) {
+  e.preventDefault();
+  getFavourites();
+});
+function getFavourites() {
+  return _getFavourites.apply(this, arguments);
 }
 /**
- * 9. Test your favourite() function by creating a getFavourites() function.
- * - Use Axios to get all of your favourites from the cat API.
- * - Clear the carousel and display your favourites when the button is clicked.
- *  - You will have to bind this event listener to getFavouritesBtn yourself.
- *  - Hint: you already have all of the logic built for building a carousel.
- *    If that isn't in its own function, maybe it should be so you don't have to
- *    repeat yourself in this section.
+ * 10. Test your site, thoroughly!
+ * - What happens when you try to load the Malayan breed?
+ *  - If this is working, good job! If not, look for the reason why and fix it!
+ * - Test other breeds as well. Not every breed has the same data available, so
+ *   your code should account for this.
  */
-function _isFavouriteSelected() {
-  _isFavouriteSelected = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(imgId) {
+// Malayan breed is empty , does't contain any image , in this case I added a prototype image showimg empty display 
+// letting the user know that malayan images are not available at this moment 
+// to achieve this , I tested the returned Data from the API and test if it is empty
+function _getFavourites() {
+  _getFavourites = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
     return _regeneratorRuntime().wrap(function _callee5$(_context5) {
       while (1) switch (_context5.prev = _context5.next) {
         case 0:
           _context5.next = 2;
-          return fetch("https://api.thecatapi.com/v1/favourites?image_id=".concat(imgId), {
-            headers: {
-              method: 'GET',
-              "content-type": "application/json",
-              'x-api-key': API_KEY
-            }
-          }).then(function (response) {
-            return response.json();
-          }).then(function (data) {
-            if (data.length !== 0) {
-              fetch("https://api.thecatapi.com/v1/favourites/".concat(data[0].id), {
-                method: 'DELETE',
-                headers: {
-                  'x-api-key': API_KEY,
-                  'Content-type': 'application/json'
-                }
-              });
-              return true;
-            } else return false;
-          });
-        case 2:
-          return _context5.abrupt("return", _context5.sent);
-        case 3:
-        case "end":
-          return _context5.stop();
-      }
-    }, _callee5);
-  }));
-  return _isFavouriteSelected.apply(this, arguments);
-}
-function getFavourites() {
-  return _getFavourites.apply(this, arguments);
-}
-function _getFavourites() {
-  _getFavourites = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-    return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-      while (1) switch (_context6.prev = _context6.next) {
-        case 0:
-          _context6.next = 2;
           return axiosApiUrl.get('/favourites', {
             headers: {
               'x-api-key': API_KEY
@@ -23637,59 +23647,20 @@ function _getFavourites() {
           }).then(function (images) {
             Carousel.clear();
             images.map(function (img) {
-              var element = Carousel.createCarouselItem(img.image.url, "".concat(img.id), img.image_id, true);
+              var element = Carousel.createCarouselItem(img.image.url, "".concat(img.image_id), img.image_id, true);
               Carousel.appendCarousel(element);
             });
             Carousel.start();
           });
         case 2:
-          return _context6.abrupt("return", _context6.sent);
+          return _context5.abrupt("return", _context5.sent);
         case 3:
         case "end":
-          return _context6.stop();
+          return _context5.stop();
       }
-    }, _callee6);
+    }, _callee5);
   }));
   return _getFavourites.apply(this, arguments);
-}
-getFavouritesBtn.addEventListener('click', function (e) {
-  e.preventDefault();
-  getFavourites();
-});
-function isImageFavourite(_x5) {
-  return _isImageFavourite.apply(this, arguments);
-}
-/**
- * 10. Test your site, thoroughly!
- * - What happens when you try to load the Malayan breed?
- *  - If this is working, good job! If not, look for the reason why and fix it!
- * - Test other breeds as well. Not every breed has the same data available, so
- *   your code should account for this.
- */
-function _isImageFavourite() {
-  _isImageFavourite = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7(imgId) {
-    return _regeneratorRuntime().wrap(function _callee7$(_context7) {
-      while (1) switch (_context7.prev = _context7.next) {
-        case 0:
-          _context7.next = 2;
-          return axiosApiUrl.get("/favourites?image_id=".concat(imgId), {
-            headers: {
-              'x-api-key': API_KEY
-            }
-          }).then(function (response) {
-            return response.data;
-          }).then(function (data) {
-            return console.log(data.length !== 0);
-          });
-        case 2:
-          return _context7.abrupt("return", _context7.sent);
-        case 3:
-        case "end":
-          return _context7.stop();
-      }
-    }, _callee7);
-  }));
-  return _isImageFavourite.apply(this, arguments);
 }
 },{"jquery":"node_modules/jquery/dist/jquery.js","./Carousel.js":"Carousel.js","axios":"node_modules/axios/index.js"}],"Carousel.js":[function(require,module,exports) {
 "use strict";
@@ -23791,7 +23762,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "38935" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "39379" + '/');
   ws.onmessage = function (event) {
     checkedAssets = {};
     assetsToAccept = [];

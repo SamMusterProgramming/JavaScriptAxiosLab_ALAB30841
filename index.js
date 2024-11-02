@@ -2,6 +2,7 @@ import { error } from "jquery";
 import * as Carousel from "./Carousel.js";
 import axios from "axios";
 
+
 // The breed selection input element.
 const breedSelect = document.getElementById("breedSelect");
 // The information section div element.
@@ -34,12 +35,14 @@ document.querySelector("body").addEventListener("click", (e) => {
   e.preventDefault();
 });
 
+
+
 // set up axios here
 const baseURL = `https://api.thecatapi.com/v1`;
 const axiosApiUrl = axios.create({
   baseURL:baseURL
 });
-
+// axios interceptors
 axiosApiUrl.interceptors.request.use(request => {
   console.log('Request sent.');
   document.querySelector("body").style.cursor = "progress"
@@ -67,6 +70,11 @@ axiosApiUrl.interceptors.response.use(
       throw error;
 });
 
+
+// before we display images of each selected breed , i want to add a logic that hundles favourites images in a way to show a red heart for favourite images 
+let storeFavouriteImages = [];
+
+
 const initialLoad = async () => {
     axiosApiUrl.get('/breeds')
     .then((response) => {
@@ -83,7 +91,8 @@ const initialLoad = async () => {
             const element = Carousel.createCarouselItem(
               img.url,
               `${img.id}`,
-              img.id
+              img.id,
+              storeFavouriteImages.includes(img.id)
              );
             Carousel.appendCarousel(element);
           })
@@ -102,7 +111,7 @@ const initialLoad = async () => {
 
 initialLoad();
 
-
+//helper function
 const selectedBreedById = async (id) => {
   return await axiosApiUrl.get(`/images/search?limit=20&breed_ids=${id}&api_key=${API_KEY}`,{
     onDownloadProgress: (progressEvent) => {
@@ -113,18 +122,25 @@ const selectedBreedById = async (id) => {
   )
 }
 
-
-
 breedSelect.addEventListener("change",async(e) => {
-  e.preventDefault();
-  
+  e.preventDefault();  
   Carousel.clear(); // clear the Carousel to load new images into carousel
   await selectedBreedById(e.target.value).then((images) => {
-     images.map( (img) => {
+    if(images.length == 0) {  // if empty data , we display template of image showing not available 
+      const element = Carousel.createCarouselItem(
+        "../asset/noimage.jpeg",
+        `no image`,
+        "123456",
+        false
+       );
+      Carousel.appendCarousel(element);
+    } else
+     images.map( (img) => { 
         const element = Carousel.createCarouselItem(
           img.url,
           `${img.id}`,
           img.id,
+          storeFavouriteImages.includes(img.id) // boolean to indicate wich color of the favourite button heart red/lightpink
          );
         Carousel.appendCarousel(element);
       })
@@ -140,7 +156,7 @@ Carousel.start();
  * - As an added challenge, try to do this on your own without referencing the lesson material.
  */
 
-// see above added axios interceptors to handle response duration
+// see above, I added axios interceptors to handle response duration
 
 /**
  * 6. Next, we'll create a progress bar to indicate the request is in progress.
@@ -179,46 +195,39 @@ function updateProgress (value){
  * - You can call this function by clicking on the heart at the top right of any image.
  */
 // let's use fecth here 
-export async function favourite(imgId) {
+ export async function favourite(imgId) {
   const rawBody = JSON.stringify({ 
     "image_id": imgId ,
     "sub_id":"samir2024"
      });
-    return await isFavouriteSelected(imgId).then(isAlreadyFavourite => {
-       if (!isAlreadyFavourite) {
-       fetch(`https://api.thecatapi.com/v1/favourites`, 
+  return await fetch(`https://api.thecatapi.com/v1/favourites?image_id=${imgId}`,{
+      headers:{
+           method: 'GET',
+           "content-type":"application/json",
+          'x-api-key': API_KEY
+      }
+  }).then(response => response.json()).then(data => { 
+    if(data.length !== 0){ // if image is already favourite , we delete it from favourite list  and return true
+      return fetch(`https://api.thecatapi.com/v1/favourites/${data[0].id}`, {
+        method: 'DELETE',
+        headers: { 'x-api-key': API_KEY ,
+          'Content-type': 'application/json'
+        }   
+    }).then(res => { storeFavouriteImages = storeFavouriteImages.filter(element => element != imgId); return true})
+    } else  // if image is not in favourite list , we add it and return false
+        return  fetch(`https://api.thecatapi.com/v1/favourites`, 
               {
-                  method: 'POST',
-                  headers: { 'x-api-key': API_KEY,'Content-Type': 'application/json; charset=UTF-8'  } ,
-                  body: rawBody
-              }
-          ).
-          catch(error => console.log(error))
-       }
-       return isAlreadyFavourite 
-     })
+          method: 'POST',
+          headers: { 'x-api-key': API_KEY,'Content-Type': 'application/json; charset=UTF-8'  } ,
+          body: rawBody
+            }
+           ).then(res => { storeFavouriteImages.push(imgId);return false}).catch(error => console.log(error))
+
+   })   
+  
    
 }
-async function isFavouriteSelected(imgId) {
-   return await fetch(`https://api.thecatapi.com/v1/favourites?image_id=${imgId}`,{
-    headers:{
-         method: 'GET',
-         "content-type":"application/json",
-        'x-api-key': API_KEY
-    }
-}).then(response => response.json()).then(data => { 
-  if(data.length !== 0){  
-     fetch(`https://api.thecatapi.com/v1/favourites/${data[0].id}`, {
-      method: 'DELETE',
-      headers: { 'x-api-key': API_KEY ,
-        'Content-type': 'application/json'
-      }
-      
-  }) 
-  return true
-  } else  return false
-})
-}
+
 /**
  * 9. Test your favourite() function by creating a getFavourites() function.
  * - Use Axios to get all of your favourites from the cat API.
@@ -228,41 +237,34 @@ async function isFavouriteSelected(imgId) {
  *    If that isn't in its own function, maybe it should be so you don't have to
  *    repeat yourself in this section.
  */
-async function getFavourites(){
-   return await axiosApiUrl.get('/favourites',{
-    headers: {
-       'x-api-key': API_KEY
-    }
-  }).then(response => response.data).then((images) =>
-    { Carousel.clear();
-      images.map((img) => {   
-        const element = Carousel.createCarouselItem(
-          img.image.url,
-          `${img.id}`,
-          img.image_id,
-          true
-         );
-        Carousel.appendCarousel(element);
-      })
-      Carousel.start();
+
+  getFavouritesBtn.addEventListener('click',(e)=>{
+    e.preventDefault();
+    getFavourites()
+  })
+
+  async function getFavourites(){
   
-    }
-   )
-}
-getFavouritesBtn.addEventListener('click', (e)=> {
-  e.preventDefault();
-  getFavourites()
+  return await axiosApiUrl.get('/favourites',{
+   headers: {
+      'x-api-key': API_KEY
+   }
+  }).then(response => response.data).then((images) =>
+   { Carousel.clear();
+     images.map((img) => {   
+       const element = Carousel.createCarouselItem(
+         img.image.url,
+         `${img.image_id}`,
+         img.image_id,
+         true
+        );
+       Carousel.appendCarousel(element);
+     })
+     Carousel.start();
  
-})
-
- async function isImageFavourite(imgId) {
-  return await axiosApiUrl.get(`/favourites?image_id=${imgId}`,{
-     headers:{
-   'x-api-key': API_KEY
-}
-}).then(response => response.data).then(data =>  console.log(data.length !== 0) )
-
-}
+   }
+  )
+ }
 
 
 /**
@@ -272,3 +274,7 @@ getFavouritesBtn.addEventListener('click', (e)=> {
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
  */
+
+// Malayan breed is empty , does't contain any image , in this case I added a prototype image showimg empty display 
+// letting the user know that malayan images are not available at this moment 
+// to achieve this , I tested the returned Data from the API and test if it is empty

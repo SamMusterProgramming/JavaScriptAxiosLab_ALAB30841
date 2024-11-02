@@ -15,7 +15,7 @@ export function createCarouselItem(imgSrc, imgAlt, imgId, isFavourite = false) {
 
   favBtn.addEventListener("click", () => {
     // added a logic to swicth the color of the hear button from light pink to red and verse versa
-    favourite(imgId).then(isFavourite => {
+    favourite(imgId).then( isFavourite => {
       if (isFavourite) favBtn.style.color = "lightpink" 
       else favBtn.style.color = "red"
     }) 
