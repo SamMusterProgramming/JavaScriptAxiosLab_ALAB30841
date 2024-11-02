@@ -1,5 +1,7 @@
+import { error } from "jquery";
 import * as Carousel from "./Carousel.js";
 import axios from "axios";
+
 
 // The breed selection input element.
 const breedSelect = document.getElementById("breedSelect");
@@ -9,84 +11,12 @@ const infoDump = document.getElementById("infoDump");
 const progressBar = document.getElementById("progressBar");
 // The get favourites button element.
 const getFavouritesBtn = document.getElementById("getFavouritesBtn");
-
+ 
 // Step 0: Store your API key here for reference and easy access.
+
 const API_KEY =
   "live_drFsBhIZTDdtGLrKCpfHRH7zZ598PPGGX88nFlZGu7bWT6d24t0RfZ01NVlm2rEX";
 
-/**
- * 1. Create an async function "initialLoad" that does the following:
- * - Retrieve a list of breeds from the cat API using fetch().
- * - Create new <options> for each of these breeds, and append them to breedSelect.
- *  - Each option should have a value attribute equal to the id of the breed.
- *  - Each option should display text equal to the name of the breed.
- * This function should execute immediately.
- */
-document.querySelector("body").addEventListener("click", (e) => {
-  e.preventDefault();
-});
-
-const baseUrl = `https://api.thecatapi.com/v1`;
-
-const initialLoad = async () => {
-  fetch(
-    baseUrl + `/breeds`
-    // `https://api.thecatapi.com/v1/images/search?limit=10&breeds&api_key=${API_KEY}`
-  )
-    .then((response) => response.json())
-    .then((data) => {
-      //map the data collected and for each breed option create option element and append it
-      data.map((option) => {
-        // console.log(option);
-        const optionEl = document.createElement("option");
-        optionEl.textContent = `${option.id}`;
-        optionEl.setAttribute("value", option.id);
-        breedSelect.appendChild(optionEl);
-      });
-      return data;
-    });
-};
-initialLoad();
-
-/**
- * 2. Create an event handler for breedSelect that does the following:
- * - Retrieve information on the selected breed from the cat API using fetch().
- *  - Make sure your request is receiving multiple array items!
- *  - Check the API documentation if you're only getting a single object.
- * - For each object in the response array, create a new element for the carousel.
- *  - Append each of these new elements to the carousel.
- * - Use the other data you have been given to create an informational section within the infoDump element.
- *  - Be creative with how you create DOM elements and HTML.
- *  - Feel free to edit index.html and styles.css to suit your needs, but be careful!
- *  - Remember that functionality comes first, but user experience and design are important.
- * - Each new selection should clear, re-populate, and restart the Carousel.
- * - Add a call to this function to the end of your initialLoad function above to create the initial carousel.
- */
-
-breedSelect.addEventListener("change", (e) => {
-  e.preventDefault();
-  console.log(e.target.value);
-  const selectedBreed = async () => {
-    await fetch(
-      `https://api.thecatapi.com/v1/images/search?limit=10&breeds=${e.target.value}&api_key=${API_KEY}`
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-        Carousel.clear(); // clear the Carousel to load new images into carousel
-        data.map((breed) => {
-          const element = Carousel.createCarouselItem(
-            breed.url,
-            `${breed.id}`,
-            breed.id
-          );
-          Carousel.appendCarousel(element);
-        });
-      });
-  };
-  selectedBreed();
-  Carousel.start();
-});
 
 /**
  * 3. Fork your own sandbox, creating a new one named "JavaScript Axios Lab."
@@ -100,12 +30,133 @@ breedSelect.addEventListener("change", (e) => {
  *   by setting a default header with your API key so that you do not have to
  *   send it manually with all of your requests! You can also set a default base URL!
  */
+
+document.querySelector("body").addEventListener("click", (e) => {
+  e.preventDefault();
+});
+
+
+
+// set up axios here
+const baseURL = `https://api.thecatapi.com/v1`;
+const axiosApiUrl = axios.create({
+  baseURL:baseURL
+});
+// axios interceptors
+axiosApiUrl.interceptors.request.use(request => {
+  console.log('Request sent.');
+  document.querySelector("body").style.cursor = "progress"
+  return request;
+});
+
+axiosApiUrl.interceptors.request.use(request => {
+  request.metadata = request.metadata || {};
+  request.metadata.startTime = new Date().getTime();
+  progressBar.style.width = "0";
+  document.querySelector("body").classList.add('body')
+  return request;
+});
+
+axiosApiUrl.interceptors.response.use(
+  (response) => {
+      response.config.metadata.endTime = new Date().getTime();
+      response.durationInMS = response.config.metadata.endTime - response.config.metadata.startTime;
+     
+      return response;
+  },
+  (error) => {
+      error.config.metadata.endTime = new Date().getTime();
+      error.durationInMS = error.config.metadata.endTime - error.config.metadata.startTime;
+      throw error;
+});
+
+
+// before we display images of each selected breed , i want to add a logic that hundles favourites images in a way to show a red heart for favourite images 
+let storeFavouriteImages = [];
+
+
+const initialLoad = async () => {
+    axiosApiUrl.get('/breeds')
+    .then((response) => {
+      // log the response time
+      console.log(response.durationInMS + ` ms`
+      )
+      //map the data collected and for each breed option / create option element and append it
+      const data = response.data;
+      data.map((option,index) => {
+       if(index ==0){
+         // display the first breed imgs in carousel while loading up the breeds into the selector
+         selectedBreedById(option.id).then((images) => {
+          images.map((img) => {
+            const element = Carousel.createCarouselItem(
+              img.url,
+              `${img.id}`,
+              img.id,
+              storeFavouriteImages.includes(img.id)
+             );
+            Carousel.appendCarousel(element);
+          })
+          Carousel.start();
+        }
+        )
+         }; 
+        const optionEl = document.createElement("option");
+        optionEl.textContent = `${option.id}`;
+        optionEl.setAttribute("value", option.id);
+        breedSelect.appendChild(optionEl);
+      });
+      return data;
+    });
+};
+
+initialLoad();
+
+//helper function
+const selectedBreedById = async (id) => {
+  return await axiosApiUrl.get(`/images/search?limit=20&breed_ids=${id}&api_key=${API_KEY}`,{
+    onDownloadProgress: (progressEvent) => {
+        updateProgress(`100%`)
+    }} ) 
+    // limit the images to 20 
+  .then(response =>  {console.log(response.durationInMS + ` ms`) ; return response.data}
+  )
+}
+
+breedSelect.addEventListener("change",async(e) => {
+  e.preventDefault();  
+  Carousel.clear(); // clear the Carousel to load new images into carousel
+  await selectedBreedById(e.target.value).then((images) => {
+    if(images.length == 0) {  // if empty data , we display template of image showing not available 
+      const element = Carousel.createCarouselItem(
+        "../asset/noimage.jpeg",
+        `no image`,
+        "123456",
+        false
+       );
+      Carousel.appendCarousel(element);
+    } else
+     images.map( (img) => { 
+        const element = Carousel.createCarouselItem(
+          img.url,
+          `${img.id}`,
+          img.id,
+          storeFavouriteImages.includes(img.id) // boolean to indicate wich color of the favourite button heart red/lightpink
+         );
+        Carousel.appendCarousel(element);
+      })
+    Carousel.start();
+      })
+  .catch(error => console.log(error))
+});
+Carousel.start();
 /**
  * 5. Add axios interceptors to log the time between request and response to the console.
  * - Hint: you already have access to code that does this!
  * - Add a console.log statement to indicate when requests begin.
  * - As an added challenge, try to do this on your own without referencing the lesson material.
  */
+
+// see above, I added axios interceptors to handle response duration
 
 /**
  * 6. Next, we'll create a progress bar to indicate the request is in progress.
@@ -122,6 +173,10 @@ breedSelect.addEventListener("change", (e) => {
  *   once or twice per request to this API. This is still a concept worth familiarizing yourself
  *   with for future projects.
  */
+ 
+function updateProgress (value){
+  progressBar.style.width = value;
+}
 
 /**
  * 7. As a final element of progress indication, add the following to your axios interceptors:
@@ -139,8 +194,38 @@ breedSelect.addEventListener("change", (e) => {
  *   you delete that favourite using the API, giving this function "toggle" functionality.
  * - You can call this function by clicking on the heart at the top right of any image.
  */
-export async function favourite(imgId) {
-  // your code here
+// let's use fecth here 
+ export async function favourite(imgId) {
+  const rawBody = JSON.stringify({ 
+    "image_id": imgId ,
+    "sub_id":"samir2024"
+     });
+  return await fetch(`https://api.thecatapi.com/v1/favourites?image_id=${imgId}`,{
+      headers:{
+           method: 'GET',
+           "content-type":"application/json",
+          'x-api-key': API_KEY
+      }
+  }).then(response => response.json()).then(data => { 
+    if(data.length !== 0){ // if image is already favourite , we delete it from favourite list  and return true
+      return fetch(`https://api.thecatapi.com/v1/favourites/${data[0].id}`, {
+        method: 'DELETE',
+        headers: { 'x-api-key': API_KEY ,
+          'Content-type': 'application/json'
+        }   
+    }).then(res => { storeFavouriteImages = storeFavouriteImages.filter(element => element != imgId); return true})
+    } else  // if image is not in favourite list , we add it and return false
+        return  fetch(`https://api.thecatapi.com/v1/favourites`, 
+              {
+          method: 'POST',
+          headers: { 'x-api-key': API_KEY,'Content-Type': 'application/json; charset=UTF-8'  } ,
+          body: rawBody
+            }
+           ).then(res => { storeFavouriteImages.push(imgId);return false}).catch(error => console.log(error))
+
+   })   
+  
+   
 }
 
 /**
@@ -153,6 +238,35 @@ export async function favourite(imgId) {
  *    repeat yourself in this section.
  */
 
+  getFavouritesBtn.addEventListener('click',(e)=>{
+    e.preventDefault();
+    getFavourites()
+  })
+
+  async function getFavourites(){
+  
+  return await axiosApiUrl.get('/favourites',{
+   headers: {
+      'x-api-key': API_KEY
+   }
+  }).then(response => response.data).then((images) =>
+   { Carousel.clear();
+     images.map((img) => {   
+       const element = Carousel.createCarouselItem(
+         img.image.url,
+         `${img.image_id}`,
+         img.image_id,
+         true
+        );
+       Carousel.appendCarousel(element);
+     })
+     Carousel.start();
+ 
+   }
+  )
+ }
+
+
 /**
  * 10. Test your site, thoroughly!
  * - What happens when you try to load the Malayan breed?
@@ -160,3 +274,7 @@ export async function favourite(imgId) {
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
  */
+
+// Malayan breed is empty , does't contain any image , in this case I added a prototype image showimg empty display 
+// letting the user know that malayan images are not available at this moment 
+// to achieve this , I tested the returned Data from the API and test if it is empty
