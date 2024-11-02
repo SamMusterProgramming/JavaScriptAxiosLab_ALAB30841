@@ -1,5 +1,5 @@
 to run this app you should :
-1- open the repository in cosescape or vscode and run command : npm install . this will install all the requirements and dependencies
+1- open the repository in codespace or vscode and run command : npm install . this will install all the requirements and dependencies
 2-type in command : npm start 
 
 
